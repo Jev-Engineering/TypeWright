@@ -116,3 +116,33 @@ equal to its row count has no spare attempts for retries. If exhausted,
 the runner must retain the selected program, mark the arm incomplete without a
 score, and continue other arms. It must not silently refill budgets or count a
 partial calibration as complete.
+
+### Exact endpoint policy (#88)
+
+The local adapter now accepts only these exact HTTPS destination strings:
+
+| Route | Destination |
+|---|---|
+| Vercel keys 1 and 2 | `https://ai-gateway.vercel.sh/typesafe/v1/systemone` |
+| BeatAPI | `https://api.beatapi.io/v1/systemone` |
+| OpenCode Zen | `https://opencode.ai/zen/v1/systemone` |
+| Classifier.dev | `https://classifier.dev/v1/systemone` |
+
+This strict policy was approved by the endpoint-policy owner on 2026-11-12 and
+is enforced by the adapter. The three configurable third-party destinations match
+the public `.env.example`. A worker whose `.env.local` points routes 3-5 at any
+other destination now fails at startup, before any credential is sent. No operator
+`.env.local` was inspected, no live worker configuration was changed and no live
+route qualification was performed for this patch, so existing workers should
+confirm their destinations match before restarting. Alternate hosts, proxies,
+explicit ports (including 443), path variations, case variations, userinfo, query
+strings, fragments, whitespace and malformed URLs all fail closed. Supporting a different endpoint requires a reviewed policy
+change; environment configuration alone cannot authorize it.
+
+Validation runs while constructing route settings, before constructing the HTTP
+client, and again before each dispatch. Native adapters copy their configuration
+and reject later destination drift before serializing study state. Redirects are
+disabled at client construction and explicitly at dispatch; every non-200 response,
+including redirects, is an error. Offline regression tests use fake credentials,
+synthetic state and local HTTP transport doubles only. They provide security
+mechanics evidence, not provider qualification.
