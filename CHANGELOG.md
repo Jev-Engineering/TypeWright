@@ -2,6 +2,11 @@
 
 ## Unreleased: rename to Typewright
 
+- Refreshed `MANIFEST.sha256` (#108): the 29 `src/s1compiler/` entries now name their renamed
+  `src/typewright/` files, and the 30 other stale hashes were recomputed, so
+  `sha256sum -c MANIFEST.sha256` passes again. The listed file set is otherwise unchanged and
+  `MANIFEST.sha256.as-shipped` is untouched. A regression test now fails if any listed file is
+  missing or its hash is stale. Checksums are not signatures.
 - AI Gateway example routes now require the exact pinned HTTPS URL for each route
   (approved endpoint policy). A worker whose `.env.local` points routes 3-5 at any
   other host, port or path now fails at startup, before any credential is sent.
