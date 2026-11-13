@@ -21,7 +21,7 @@ from parallel_backend import RoutedParallel
 PIN = "jev-1.13.0"
 # A hostile or buggy Retry-After must not freeze a whole route group indefinitely.
 MAX_COOLDOWN_SECONDS = 600
-# Proposed strict endpoint policy; live adoption requires endpoint-owner review.
+# Approved exact endpoint policy (#88, owner-approved 2026-11-12); enforced, not configurable.
 ROUTE_DESTINATIONS = MappingProxyType({
     "gateway-1": "https://ai-gateway.vercel.sh/typesafe/v1/systemone",
     "gateway-2": "https://ai-gateway.vercel.sh/typesafe/v1/systemone",
@@ -36,7 +36,7 @@ def validate_destination(name, url):
     expected = ROUTE_DESTINATIONS.get(name)
     if expected is None or type(url) is not str or url != expected:
         # Never echo an untrusted URL: it may contain credentials or private data.
-        raise ConfigurationError("Route destination differs from the proposed exact HTTPS policy.")
+        raise ConfigurationError("Route destination differs from the approved exact HTTPS policy (#88).")
     return expected
 
 

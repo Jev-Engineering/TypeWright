@@ -335,7 +335,7 @@ UNSAFE_DESTINATIONS = [
 def test_unsafe_destination_rejected_before_client_construction(monkeypatch, url):
     called = []
     monkeypatch.setattr(r.httpx, "Client", lambda **kwargs: called.append(kwargs))
-    with pytest.raises(r.ConfigurationError, match="exact HTTPS policy") as exc:
+    with pytest.raises(r.ConfigurationError, match="approved exact HTTPS policy") as exc:
         r.Native("beatapi", {"url": url, "model": "jev-1.13-free"}, "fake-test-key")
     assert called == []
     assert "fake-secret" not in str(exc.value)
@@ -355,7 +355,7 @@ def test_settings_reject_destination_for_wrong_route(route, name):
     assert r.configurations(settings)[name]["url"] == r.ROUTE_DESTINATIONS[name]
 
 
-def test_proposed_destinations_match_public_example():
+def test_pinned_destinations_match_public_example():
     settings = r.dotenv_values(Path(r.__file__).parent / ".env.example")
     for route, name in [(3, "beatapi"), (4, "opencode-zen"), (5, "classifier")]:
         assert settings[f"AI_GATEWAY_ROUTE_{route}_SYSTEMONE_URL"] == r.ROUTE_DESTINATIONS[name]
@@ -454,7 +454,7 @@ def test_unsafe_destination_rejected_during_settings_construction(route, url):
         f"AI_GATEWAY_ROUTE_{route}_MODEL": r.PIN if route == 5 else "jev-1.13-free",
         f"AI_GATEWAY_ROUTE_{route}_SYSTEMONE_URL": url,
     }
-    with pytest.raises(r.ConfigurationError, match="exact HTTPS policy"):
+    with pytest.raises(r.ConfigurationError, match="approved exact HTTPS policy"):
         r.configurations(settings)
 
 

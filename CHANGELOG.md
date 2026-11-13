@@ -2,6 +2,10 @@
 
 ## Unreleased: rename to Typewright
 
+- AI Gateway example routes now require the exact pinned HTTPS URL for each route
+  (approved endpoint policy). A worker whose `.env.local` points routes 3-5 at any
+  other host, port or path now fails at startup, before any credential is sent.
+  Redirects are refused and errors never echo the configured URL (#88).
 - Frozen hierarchy artifacts are now checked for lexical scope on load: node origins must match
   their export chain, references, `after` edges, and finals may not cross subgraph scopes (except
   through the inputs an export passes down), and exports must have descendant nodes (#85).
