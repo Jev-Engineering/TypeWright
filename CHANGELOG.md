@@ -6,9 +6,13 @@
   (approved endpoint policy). A worker whose `.env.local` points routes 3-5 at any
   other host, port or path now fails at startup, before any credential is sent.
   Redirects are refused and errors never echo the configured URL (#88).
-- Documented which dependencies are exact pins and which float (bounded ranges, unpinned
-  transitive packages, fresh CI resolution, no lock file) in `docs/INTEGRATIONS.md`, linked from
-  the README, with a regression test against `pyproject.toml` (#50). No lock was generated.
+- Documented which Python dependencies are exact pins and which float (bounded ranges, unpinned
+  transitive packages, fresh CI resolution, no current resolved Python lock) in
+  `docs/INTEGRATIONS.md`, linked from the README. The section also names the two tracked lock-like
+  files and their scope: the npm lock for the Node gateway smoke (`ai` pinned at `7.0.114`) and the
+  stale, Windows/CPython 3.13-only historical freeze in `reports/`. Regression tests check the
+  tables against `pyproject.toml` and require every lock-like file in the tree to be named (#50).
+  No lock was generated.
 - Frozen hierarchy artifacts are now checked for lexical scope on load: node origins must match
   their export chain, references, `after` edges, and finals may not cross subgraph scopes (except
   through the inputs an export passes down), and exports must have descendant nodes (#85).

@@ -145,9 +145,13 @@ typewright doctor --check-optional   # checks installed interfaces; never calls 
 ```
 
 These pins are integration targets, **not a fully resolved dependency lock**.
-Only `typesafe-sdk`, `gepa`, and DSPy in the `compile` and `all` extras are
-exact pins; everything else, including the `optimize` DSPy range and all
-transitive packages, floats. The full list is in
+Among the Python requirements, only `typesafe-sdk`, `gepa`, and DSPy in the
+`compile` and `all` extras are exact pins; everything else, including the
+`optimize` DSPy range and all transitive packages, floats. The Python package
+has no current resolved lock. The only tracked lock is the npm lock for the
+optional Node gateway smoke (`ai` pinned at `7.0.114`), and
+`reports/resolved-lock-windows-py313.txt` is a stale, Windows/CPython 3.13-only
+historical freeze, not an authoritative lock. Details are in
 [Pinned and floating dependencies](docs/INTEGRATIONS.md#pinned-and-floating-dependencies).
 Generate a lock in your own verified environment before reproducible live
 experiments. See also [docs/SOURCES.md](docs/SOURCES.md).

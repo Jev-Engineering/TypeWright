@@ -19,9 +19,25 @@ installing an arbitrary newest version.
 
 ## Pinned and floating dependencies
 
-There is no lock file in this repository and none was fabricated. The declared
-requirements in `pyproject.toml` and `examples/ai-gateway/requirements.txt` are
-the whole story; nothing is hashed.
+The Python package has no current resolved lock, and none was fabricated. For
+Python installs, the declared requirements in `pyproject.toml` and
+`examples/ai-gateway/requirements.txt` are the whole story, and no Python
+requirement is hashed. The tables below cover Python requirements only.
+
+Two tracked files are locks or lock-like. Neither is a current lock for the
+Python package:
+
+- `examples/ai-gateway/package-lock.json` is a real npm lock (lockfileVersion 3)
+  for the optional Node AI Gateway smoke only. `examples/ai-gateway/package.json`
+  pins `ai` exactly at `7.0.114`, and the lock records a `resolved` URL and a
+  sha512 `integrity` hash for every package in that tree, so `npm ci` installs it
+  exactly. It does not affect the Python package.
+- `reports/resolved-lock-windows-py313.txt` is a historical `pip freeze` from
+  2026-09-19, scoped to CPython 3.13.13 on Windows 11 (win_amd64) with
+  `pip install -e ".[all,dev]"`. It is stale and not maintained: it predates the
+  rename (it names `systemone-compiler`) and records `dspy==3.3.1`, while the
+  `compile` and `all` extras now pin DSPy 3.4.0. Do not treat it as authoritative
+  for any current install.
 
 Exact pins (`==`), resolved to that version only:
 
@@ -48,12 +64,13 @@ Bounded ranges, which float to the newest release inside the range at install ti
 | `httpx>=0.28,<1` | `examples/ai-gateway/requirements.txt` |
 | `python-dotenv>=1.0,<2` | `examples/ai-gateway/requirements.txt` |
 
-The build backend requirements (`setuptools>=77`, `wheel`) have a lower bound or
-no bound at all.
+The build backend requirements in `[build-system]` (`setuptools>=77`, `wheel`)
+have a lower bound or no bound at all.
 
 Transitive dependencies are not pinned or hashed. Everything the SDKs, DSPy, and
 GEPA pull in, such as `litellm` through `dspy[litellm]`, resolves to whatever the
-installer picks on the day, subject only to those packages' own constraints. CI (`.github/workflows/ci.yml`) resolves fresh on every run: the
+installer picks on the day, subject only to those packages' own constraints.
+CI (`.github/workflows/ci.yml`) resolves fresh on every run: the
 core job installs `.[dev]` plus the gateway requirements, and the optional job
 installs `.[all,dev]` and then reinstalls `dspy[litellm]==<matrix version>` and
 `gepa==0.1.4` for each end of the supported DSPy range. A passing run therefore
