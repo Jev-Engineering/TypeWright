@@ -145,9 +145,12 @@ typewright doctor --check-optional   # checks installed interfaces; never calls 
 ```
 
 These pins are integration targets, **not a fully resolved dependency lock**.
+Only `typesafe-sdk`, `gepa`, and DSPy in the `compile` and `all` extras are
+exact pins; everything else, including the `optimize` DSPy range and all
+transitive packages, floats. The full list is in
+[Pinned and floating dependencies](docs/INTEGRATIONS.md#pinned-and-floating-dependencies).
 Generate a lock in your own verified environment before reproducible live
-experiments. See [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) and
-[docs/SOURCES.md](docs/SOURCES.md).
+experiments. See also [docs/SOURCES.md](docs/SOURCES.md).
 
 ## Declare a use case
 

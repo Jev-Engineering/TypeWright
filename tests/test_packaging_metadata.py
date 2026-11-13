@@ -54,3 +54,41 @@ def test_checked_in_json_schemas_match_the_models():
     for name, model in expected.items():
         stored = json.loads((directory / name).read_text(encoding="utf-8"))
         assert stored == model.model_json_schema(), f"{name} is stale; run `typewright schema --out schemas`"
+
+
+def _dependency_section():
+    text = (ROOT / "docs" / "INTEGRATIONS.md").read_text(encoding="utf-8")
+    start = text.index("## Pinned and floating dependencies")
+    end = text.index("\n## ", start + 1)
+    return text[start:end]
+
+
+def _declared_requirements(pyproject):
+    project = pyproject["project"]
+    declared = list(project["dependencies"])
+    for requirements in project["optional-dependencies"].values():
+        declared.extend(requirements)
+    gateway = (ROOT / "examples" / "ai-gateway" / "requirements.txt").read_text(encoding="utf-8")
+    declared.extend(line.strip() for line in gateway.splitlines()
+                    if line.strip() and not line.strip().startswith("#"))
+    return set(declared)
+
+
+def test_dependency_doc_lists_every_declared_exact_pin_and_range(pyproject):
+    # Expectations come from pyproject.toml and the gateway requirements, not from the doc (#50).
+    section = _dependency_section()
+    exact_heading = section.index("Exact pins")
+    range_heading = section.index("Bounded ranges")
+    exact_block, range_block = section[exact_heading:range_heading], section[range_heading:]
+    for requirement in _declared_requirements(pyproject):
+        if "==" in requirement:
+            assert f"`{requirement}`" in exact_block, f"{requirement} missing from documented exact pins"
+        else:
+            assert f"`{requirement}`" in range_block, f"{requirement} missing from documented ranges"
+
+
+def test_dependency_doc_matches_absence_of_lock_file():
+    lock_names = ("uv.lock", "poetry.lock", "Pipfile.lock", "pdm.lock", "pylock.toml",
+                  "requirements.lock", "constraints.txt")
+    assert not [name for name in lock_names if (ROOT / name).exists()], "Lock file present; update #50 docs."
+    assert "no lock file" in _dependency_section().lower()

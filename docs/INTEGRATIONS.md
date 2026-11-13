@@ -17,6 +17,50 @@ may fail on a different Python/platform/provider combination. Verify against
 primary documentation and change pins with regression tests rather than silently
 installing an arbitrary newest version.
 
+## Pinned and floating dependencies
+
+There is no lock file in this repository and none was fabricated. The declared
+requirements in `pyproject.toml` and `examples/ai-gateway/requirements.txt` are
+the whole story; nothing is hashed.
+
+Exact pins (`==`), resolved to that version only:
+
+| Requirement | Declared in |
+|---|---|
+| `typesafe-sdk==0.7.0` | `live`, `compile`, `all` extras |
+| `dspy[typesafe]==3.4.0` | `compile` extra |
+| `dspy[litellm,typesafe]==3.4.0` | `all` extra |
+| `gepa==0.1.4` | `optimize`, `all` extras |
+
+Bounded ranges, which float to the newest release inside the range at install time:
+
+| Requirement | Declared in |
+|---|---|
+| `pydantic>=2.10,<3` | base dependencies |
+| `PyYAML>=6.0,<7` | base dependencies |
+| `dspy[litellm]>=3.3.1,<3.5` | `optimize` extra |
+| `numpy>=1.26,<3` | `research` extra |
+| `matplotlib>=3.8,<4` | `research` extra |
+| `pytest>=8,<10` | `dev`, `all` extras |
+| `pytest-cov>=5,<8` | `dev`, `all` extras |
+| `ruff>=0.11,<1` | `dev` extra |
+| `build>=1,<2` | `dev` extra |
+| `httpx>=0.28,<1` | `examples/ai-gateway/requirements.txt` |
+| `python-dotenv>=1.0,<2` | `examples/ai-gateway/requirements.txt` |
+
+The build backend requirements (`setuptools>=77`, `wheel`) have a lower bound or
+no bound at all.
+
+Transitive dependencies are not pinned or hashed. Everything the SDKs, DSPy, and
+GEPA pull in, such as `litellm` through `dspy[litellm]`, resolves to whatever the
+installer picks on the day, subject only to those packages' own constraints. CI (`.github/workflows/ci.yml`) resolves fresh on every run: the
+core job installs `.[dev]` plus the gateway requirements, and the optional job
+installs `.[all,dev]` and then reinstalls `dspy[litellm]==<matrix version>` and
+`gepa==0.1.4` for each end of the supported DSPy range. A passing run therefore
+describes the versions resolved for that run, not a reproducible environment.
+Generate and record your own lock in a verified environment before reproducible
+live experiments.
+
 ## DSPy 3.3.1 and 3.4.x (issue #90)
 
 The supported range is `>=3.3.1,<3.5`, with `gepa==0.1.4` pinned (DSPy 3.4.0 resolves
