@@ -14,9 +14,10 @@
   tables against `pyproject.toml` and require every lock-like file in the tree to be named (#50).
   No lock was generated.
 - CI hardening (#50): the `push` trigger is limited to `main` (pull requests still run), superseded
-  pull request runs are cancelled by a concurrency group, each job has a 20 minute timeout,
-  `actions/checkout` and `actions/setup-python` are pinned to verified commit SHAs, pip installs
-  retry up to three times before failing, and the core matrix adds Python 3.14.
+  pull request runs are cancelled by a per-PR concurrency group (runs on `main` each get their own
+  group, so none is queued or cancelled), each job has a 20 minute timeout, `actions/checkout` and
+  `actions/setup-python` are pinned to verified commit SHAs, pip installs retry up to three times
+  through `scripts/ci_pip_install.sh` before failing, and the core matrix adds Python 3.14.
 - Frozen hierarchy artifacts are now checked for lexical scope on load: node origins must match
   their export chain, references, `after` edges, and finals may not cross subgraph scopes (except
   through the inputs an export passes down), and exports must have descendant nodes (#85).

@@ -5,9 +5,14 @@ on:
   pull_request:
 permissions:
   contents: read
-# Pull request runs superseded by a newer push are cancelled; runs on main are never cancelled.
+# Pull request runs share one group per PR, so a newer push cancels the superseded run.
+# Every other run (pushes to main) gets its own group keyed by run_id, so main runs are never
+# queued behind, or cancelled by, another run. run_id is unique per workflow run and is kept
+# across re-runs, so a re-run cannot collide with a different run (a sha key would group two
+# runs of the same commit). GitHub cancels a pending run when a newer one joins its group even
+# with cancel-in-progress false, which is why a shared main group is not used.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   core:
@@ -24,20 +29,10 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Install package with dev extras
         run: |
-          for attempt in 1 2 3; do
-            if python -m pip install -e '.[dev]'; then break; fi
-            if [ "$attempt" -eq 3 ]; then echo "::error::pip install failed after 3 attempts"; exit 1; fi
-            echo "::warning::pip install attempt $attempt failed; retrying in 15s"
-            sleep 15
-          done
+          bash scripts/ci_pip_install.sh python -e '.[dev]'
       - name: Install example requirements
         run: |
-          for attempt in 1 2 3; do
-            if python -m pip install -r examples/ai-gateway/requirements.txt; then break; fi
-            if [ "$attempt" -eq 3 ]; then echo "::error::pip install failed after 3 attempts"; exit 1; fi
-            echo "::warning::pip install attempt $attempt failed; retrying in 15s"
-            sleep 15
-          done
+          bash scripts/ci_pip_install.sh python -r examples/ai-gateway/requirements.txt
       - run: python -m ruff check src tests examples
       - run: python -m pytest -q --cov=typewright
       - run: python -m typewright demo --out runs/ci-demo
@@ -48,12 +43,7 @@ jobs:
         run: |
           temp_dir="$(mktemp -d)"
           python -m venv "$temp_dir/venv"
-          for attempt in 1 2 3; do
-            if "$temp_dir/venv/bin/python" -m pip install "$GITHUB_WORKSPACE"/dist/typewright-*.whl; then break; fi
-            if [ "$attempt" -eq 3 ]; then echo "::error::pip install failed after 3 attempts"; exit 1; fi
-            echo "::warning::pip install attempt $attempt failed; retrying in 15s"
-            sleep 15
-          done
+          bash scripts/ci_pip_install.sh "$temp_dir/venv/bin/python" "$GITHUB_WORKSPACE"/dist/typewright-*.whl
           cp -R "$GITHUB_WORKSPACE/examples/hierarchy/support" "$temp_dir/study-inputs"
           cd "$temp_dir"
           unset PYTHONPATH
@@ -84,28 +74,13 @@ jobs:
           python-version: '3.11'
       - name: Install package with all and dev extras
         run: |
-          for attempt in 1 2 3; do
-            if python -m pip install -e '.[all,dev]'; then break; fi
-            if [ "$attempt" -eq 3 ]; then echo "::error::pip install failed after 3 attempts"; exit 1; fi
-            echo "::warning::pip install attempt $attempt failed; retrying in 15s"
-            sleep 15
-          done
+          bash scripts/ci_pip_install.sh python -e '.[all,dev]'
       - name: Install example requirements
         run: |
-          for attempt in 1 2 3; do
-            if python -m pip install -r examples/ai-gateway/requirements.txt; then break; fi
-            if [ "$attempt" -eq 3 ]; then echo "::error::pip install failed after 3 attempts"; exit 1; fi
-            echo "::warning::pip install attempt $attempt failed; retrying in 15s"
-            sleep 15
-          done
+          bash scripts/ci_pip_install.sh python -r examples/ai-gateway/requirements.txt
       - name: Install pinned DSPy and GEPA
         run: |
-          for attempt in 1 2 3; do
-            if python -m pip install 'dspy[litellm]==${{ matrix.dspy }}' 'gepa==0.1.4'; then break; fi
-            if [ "$attempt" -eq 3 ]; then echo "::error::pip install failed after 3 attempts"; exit 1; fi
-            echo "::warning::pip install attempt $attempt failed; retrying in 15s"
-            sleep 15
-          done
+          bash scripts/ci_pip_install.sh python 'dspy[litellm]==${{ matrix.dspy }}' 'gepa==0.1.4'
       - run: python -m typewright doctor --check-optional
       - run: python -m pytest -q
 # This workflow never uses API secrets and does not run paid inference.
