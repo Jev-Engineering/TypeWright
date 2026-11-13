@@ -1,22 +1,43 @@
 name: tests
 on:
   push:
+    branches: [main]
   pull_request:
 permissions:
   contents: read
+# Pull request runs superseded by a newer push are cancelled; runs on main are never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   core:
     runs-on: ubuntu-latest
+    # Observed runs take about 1 minute; the limit leaves room for install retries and slow runners.
+    timeout-minutes: 20
     strategy:
       matrix:
-        python: ['3.11', '3.12', '3.13']
+        python: ['3.11', '3.12', '3.13', '3.14']
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ matrix.python }}
-      - run: python -m pip install -e '.[dev]'
-      - run: python -m pip install -r examples/ai-gateway/requirements.txt
+      - name: Install package with dev extras
+        run: |
+          for attempt in 1 2 3; do
+            if python -m pip install -e '.[dev]'; then break; fi
+            if [ "$attempt" -eq 3 ]; then echo "::error::pip install failed after 3 attempts"; exit 1; fi
+            echo "::warning::pip install attempt $attempt failed; retrying in 15s"
+            sleep 15
+          done
+      - name: Install example requirements
+        run: |
+          for attempt in 1 2 3; do
+            if python -m pip install -r examples/ai-gateway/requirements.txt; then break; fi
+            if [ "$attempt" -eq 3 ]; then echo "::error::pip install failed after 3 attempts"; exit 1; fi
+            echo "::warning::pip install attempt $attempt failed; retrying in 15s"
+            sleep 15
+          done
       - run: python -m ruff check src tests examples
       - run: python -m pytest -q --cov=typewright
       - run: python -m typewright demo --out runs/ci-demo
@@ -27,7 +48,12 @@ jobs:
         run: |
           temp_dir="$(mktemp -d)"
           python -m venv "$temp_dir/venv"
-          "$temp_dir/venv/bin/python" -m pip install "$GITHUB_WORKSPACE"/dist/typewright-*.whl
+          for attempt in 1 2 3; do
+            if "$temp_dir/venv/bin/python" -m pip install "$GITHUB_WORKSPACE"/dist/typewright-*.whl; then break; fi
+            if [ "$attempt" -eq 3 ]; then echo "::error::pip install failed after 3 attempts"; exit 1; fi
+            echo "::warning::pip install attempt $attempt failed; retrying in 15s"
+            sleep 15
+          done
           cp -R "$GITHUB_WORKSPACE/examples/hierarchy/support" "$temp_dir/study-inputs"
           cd "$temp_dir"
           unset PYTHONPATH
@@ -46,18 +72,40 @@ jobs:
           "$temp_dir/venv/bin/typewright-study" report --frozen study-frozen --execution study-execution
   optional-contracts:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       matrix:
         # Both ends of the supported range in pyproject.toml (issue #90).
         dspy: ['3.3.1', '3.4.0']
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
-      - run: python -m pip install -e '.[all,dev]'
-      - run: python -m pip install -r examples/ai-gateway/requirements.txt
-      - run: python -m pip install 'dspy[litellm]==${{ matrix.dspy }}' 'gepa==0.1.4'
+      - name: Install package with all and dev extras
+        run: |
+          for attempt in 1 2 3; do
+            if python -m pip install -e '.[all,dev]'; then break; fi
+            if [ "$attempt" -eq 3 ]; then echo "::error::pip install failed after 3 attempts"; exit 1; fi
+            echo "::warning::pip install attempt $attempt failed; retrying in 15s"
+            sleep 15
+          done
+      - name: Install example requirements
+        run: |
+          for attempt in 1 2 3; do
+            if python -m pip install -r examples/ai-gateway/requirements.txt; then break; fi
+            if [ "$attempt" -eq 3 ]; then echo "::error::pip install failed after 3 attempts"; exit 1; fi
+            echo "::warning::pip install attempt $attempt failed; retrying in 15s"
+            sleep 15
+          done
+      - name: Install pinned DSPy and GEPA
+        run: |
+          for attempt in 1 2 3; do
+            if python -m pip install 'dspy[litellm]==${{ matrix.dspy }}' 'gepa==0.1.4'; then break; fi
+            if [ "$attempt" -eq 3 ]; then echo "::error::pip install failed after 3 attempts"; exit 1; fi
+            echo "::warning::pip install attempt $attempt failed; retrying in 15s"
+            sleep 15
+          done
       - run: python -m typewright doctor --check-optional
       - run: python -m pytest -q
 # This workflow never uses API secrets and does not run paid inference.
