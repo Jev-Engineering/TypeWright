@@ -1,4 +1,5 @@
 """Packaging metadata regression tests. No build, network, or inference required."""
+import hashlib
 import json
 import re
 import tomllib
@@ -162,3 +163,39 @@ def test_dependency_doc_names_every_lock_like_file_in_the_tree():
     undocumented = [path for path in found if f"`{path}`" not in section]
     assert not undocumented, f"Lock-like files not named in docs/INTEGRATIONS.md: {undocumented}"
     assert "has no current resolved lock" in " ".join(section.split())
+
+
+def _manifest_entries():
+    manifest = ROOT / "MANIFEST.sha256"
+    if not manifest.is_file():
+        pytest.skip("MANIFEST.sha256 is only present in a source checkout")
+    entries = []
+    for number, line in enumerate(manifest.read_text(encoding="utf-8").splitlines(), start=1):
+        match = re.fullmatch(r"([0-9a-f]{64})  (\S.*)", line)
+        assert match, f"MANIFEST.sha256 line {number} is not `<sha256>  <path>`: {line!r}"
+        entries.append((match.group(2), match.group(1)))
+    return entries
+
+
+def _checkout_sha256(path):
+    data = path.read_bytes()
+    digests = {hashlib.sha256(data).hexdigest()}
+    # Git with core.autocrlf (common on Windows) checks LF text out as CRLF; every listed text file
+    # is committed with LF, so also accept the committed form. Linux CI compares raw bytes only.
+    if b"\0" not in data and b"\r\n" in data:
+        digests.add(hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest())
+    return digests
+
+
+def test_manifest_sha256_matches_the_tree():
+    # MANIFEST.sha256 is a living checksum list of the current tree (#108); it must not drift silently.
+    # MANIFEST.sha256.as-shipped is the historical record and is not checked here. Checksums are not
+    # signatures: this attests only that listed files match, not who produced them.
+    entries = _manifest_entries()
+    paths = [path for path, _ in entries]
+    assert paths == sorted(paths), "MANIFEST.sha256 entries must stay sorted by path"
+    assert len(paths) == len(set(paths)), "MANIFEST.sha256 lists a path more than once"
+    missing = [path for path in paths if not (ROOT / path).is_file()]
+    assert not missing, f"MANIFEST.sha256 lists files that do not exist: {missing}"
+    stale = [path for path, digest in entries if digest not in _checkout_sha256(ROOT / path)]
+    assert not stale, f"MANIFEST.sha256 is stale for {stale}; recompute those entries with sha256sum"

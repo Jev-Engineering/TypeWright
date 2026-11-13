@@ -95,6 +95,10 @@ remote CI, macOS/Linux/Python 3.11-3.13 runs of the renamed package, and a
 clean-environment install of the new wheel. `MANIFEST.sha256` predates the rename
 and was not regenerated.
 
+Follow-up note, November 13, 2026 (#108): `MANIFEST.sha256` has since been refreshed. Its
+`src/s1compiler/` entries now name the renamed `src/typewright/` files, all stale hashes were
+recomputed, and a regression test keeps it in sync. `MANIFEST.sha256.as-shipped` is unchanged.
+
 ## Update, October 1, 2026: DSPy 3.4.0 compatibility (issue #90)
 
 Offline only; no keys, no provider calls, no teacher uploads. Windows 11, Python 3.14.3.
